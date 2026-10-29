@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Street Fight Arena - Tech Play Games</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080d19;color:white;font-family:Arial,sans-serif;text-align:center}
+header{padding:14px;background:#121e35;border-bottom:2px solid #ff503b}
+h1{margin:0;color:#ff6047;font-size:25px}
+p{font-size:12px;color:#cbd5e1}
+button{background:#ff503b;color:white;border:0;border-radius:9px;padding:12px;font-weight:bold;touch-action:manipulation;user-select:none}
+button:active{background:#c72e24;transform:scale(.95)}
+.menu{display:flex;justify-content:center;gap:8px;padding:10px;flex-wrap:wrap}
+.hud{display:flex;gap:12px;padding:8px 12px}
+.hud>div{width:50%;font-size:13px}
+.bar{height:17px;border:2px solid white;border-radius:5px;overflow:hidden;background:#30384a;margin-top:5px}
+.fill{height:100%;width:100%;background:#35e66d;transition:width .12s}
+canvas{width:100%;max-width:900px;height:auto;display:block;margin:auto;background:#17243a;touch-action:none}
+#message{min-height:28px;color:#ffd166;font-weight:bold;padding:8px;font-size:14px}
+.controls{display:flex;justify-content:space-around;gap:8px;padding:8px;flex-wrap:wrap}
+.player{width:48%;min-width:150px}
+.pad{display:grid;grid-template-columns:repeat(3,minmax(32px,55px));justify-content:center;gap:4px;margin:8px 0}
+.pad button{padding:12px 0;font-size:17px}
+.actions{display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
+.actions button{padding:11px 6px;font-size:11px}
+.note{padding:10px;color:#9eacc6;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+<h1>🔥 STREET FIGHT ARENA 🔥</h1>
+<p>TECH PLAY GAMES • ARCADE BATTLE</p>
+</header>
+
+<div class="menu">
+<button onclick="setMode('ai')">PLAYER VS AI</button>
+<button onclick="setMode('local')">2 PLAYERS</button>
+<button onclick="startGame()">🔄 RESTART</button>
+</div>
+
+<div class="hud">
+<div><b>🔵 PLAYER 1</b><div class="bar"><div id="hp1" class="fill"></div></div></div>
+<div><b id="player2name">🔴 CPU FIGHTER</b><div class="bar"><div id="hp2" class="fill"></div></div></div>
+</div>
+
+<canvas id="game" width="900" height="440"></canvas>
+<div id="message">Choose a mode and fight!</div>
+
+<div class="controls">
+<div class="player">
+<b>🔵 PLAYER 1</b>
+<div class="pad">
+<span></span><button onclick="act(1,'jump')">⬆</button><span></span>
+<button onclick="act(1,'left')">◀</button><button onclick="act(1,'block')">🛡</button><button onclick="act(1,'right')">▶</button>
+</div>
+<div class="actions">
+<button onclick="act(1,'punch')">👊 PUNCH</button>
+<button onclick="act(1,'kick')">🦵 KICK</button>
+</div>
+</div>
+
+<div class="player">
+<b>🔴 PLAYER 2</b>
+<div class="pad">
+<span></span><button onclick="act(2,'jump')">⬆</button><span></span>
+<button onclick="act(2,'left')">◀</button><button onclick="act(2,'block')">🛡</button><button onclick="act(2,'right')">▶</button>
+</div>
+<div class="actions">
+<button onclick="act(2,'punch')">👊 PUNCH</button>
+<button onclick="act(2,'kick')">🦵 KICK</button>
+</div>
+</div>
+</div>
+
+<div class="note">
+KEYBOARD: P1 = A / D / W / F / G / H<br>
+P2 = Arrow keys / 1 / 2 / 3<br>
+Mobile: use the touch buttons.
+</div>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const msg=document.getElementById("message");
+const W=900,H=440,FLOOR=350;
+let mode="ai",running=true,frame=0,lastAI=0;
+const keys={};
+
+function makeFighter(x,color,skin,name){
+ return {x,y:FLOOR,vy:0,hp:100,color,skin,name,dir:x<450?1:-1,
+ jumping:false,blocking:false,blockUntil:0,attack:"",attackTime:0,
+ cooldown:0,flash:0};
+}
+let p1,p2;
+
+function startGame(){
+ p1=makeFighter(245,"#11c9ff","#f1b88b","PLAYER 1");
+ p2=makeFighter(655,"#ff493e","#b87954",mode==="ai"?"CPU FIGHTER":"PLAYER 2");
+ running=true;frame=0;lastAI=0;updateHUD();
+ msg.textContent=mode==="ai"?"FIGHT! Defeat the AI opponent!":"FIGHT! Player 1 vs Player 2!";
+}
+function setMode(m){
+ mode=m;
+ document.getElementById("player2name").textContent=m==="ai"?"🔴 CPU FIGHTER":"🔴 PLAYER 2";
+ startGame();
+}
+function faceOpponents(){p1.dir=p1.x<p2.x?1:-1;p2.dir=-p1.dir}
+function act(n,a){
+ if(!running)return;
+ const f=n===1?p1:p2;
+ if(a==="left")f.x-=22;
+ if(a==="right")f.x+=22;
+ if(a==="jump"&&!f.jumping){f.vy=-12;f.jumping=true}
+ if(a==="block"){f.blocking=true;f.blockUntil=frame+22}
+ if(a==="punch"||a==="kick")attack(f,n,a);
+ f.x=Math.max(40,Math.min(860,f.x));faceOpponents();
+}
+function attack(f,n,a){
+ if(f.cooldown>0)return;
+ f.attack=a;f.attackTime=13;f.cooldown=22;
+ const enemy=n===1?p2:p1;
+ if(Math.abs(enemy.x-f.x)<140&&Math.abs(enemy.y-f.y)<90){
+  let damage=a==="punch"?7:12;
+  if(enemy.blocking)damage=2;
+  enemy.hp=Math.max(0,enemy.hp-damage);enemy.flash=5;
+  msg.textContent=enemy.blocking?"BLOCK!":("HIT! "+damage+" DAMAGE");
+  updateHUD();if(enemy.hp<=0)finish(n);
+ }else msg.textContent="Move closer to hit your opponent!";
+}
+function finish(n){
+ running=false;
+ msg.textContent=(n===1?"🔵 PLAYER 1":("🔴 "+(mode==="ai"?"AI":"PLAYER 2")))+" WINS! 🏆";
+}
+function updateHUD(){
+ document.getElementById("hp1").style.width=p1.hp+"%";
+ document.getElementById("hp2").style.width=p2.hp+"%";
+ document.getElementById("hp1").style.background=p1.hp<30?"#ff443d":"#35e66d";
+ document.getElementById("hp2").style.background=p2.hp<30?"#ff443d":"#35e66d";
+}
+function background(){
+ let g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#101a35");g.addColorStop(1,"#45546b");
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle="#f9e7a2";ctx.beginPath();ctx.arc(760,60,24,0,Math.PI*2);ctx.fill();
+ for(let i=0;i<30;i++){
+  ctx.fillStyle="#e4ecff";ctx.fillRect((i*137)%W,(i*47)%140,2,2);
+ }
+ for(let i=0;i<12;i++){
+  let x=i*82-10,bh=90+(i*37)%100;
+  ctx.fillStyle=i%2?"#1b2943":"#202e49";
+  ctx.fillRect(x,235-bh/2,70,bh);
+  for(let j=0;j<4;j++){
+   ctx.fillStyle=(i+j)%3===0?"#ffd166":"#43516b";
+   ctx.fillRect(x+10+(j%2)*25,180+j*15,8,8);
+  }
+ }
+ ctx.fillStyle="#303747";ctx.fillRect(0,FLOOR,W,H-FLOOR);
+ ctx.fillStyle="#ff6047";ctx.fillRect(0,FLOOR,W,4);
+ ctx.strokeStyle="#697589";ctx.lineWidth=2;
+ for(let x=0;x<W;x+=110){
+  ctx.beginPath();ctx.moveTo(x,FLOOR+55);ctx.lineTo(x+55,FLOOR+55);ctx.stroke();
+ }
+}
+function drawFighter(f){
+ ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.dir,1);
+ ctx.fillStyle="rgba(0,0,0,.3)";
+ ctx.beginPath();ctx.ellipse(0,2,35,8,0,0,Math.PI*2);ctx.fill();
+ const kicking=f.attackTime>0&&f.attack==="kick";
+ const punching=f.attackTime>0&&f.attack==="punch";
+ ctx.lineCap="round";ctx.lineWidth=15;ctx.strokeStyle=f.color;
+ ctx.beginPath();ctx.moveTo(-10,-37);ctx.lineTo(-16,-8);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(10,-37);ctx.lineTo(kicking?45:15,-8);ctx.stroke();
+ ctx.strokeStyle="#151923";ctx.lineWidth=12;
+ ctx.beginPath();ctx.moveTo(-16,-8);ctx.lineTo(-28,-6);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(kicking?45:15,-8);ctx.lineTo(kicking?55:23,-6);ctx.stroke();
+ ctx.fillStyle=f.color;ctx.beginPath();
+ ctx.moveTo(-19,-77);ctx.lineTo(19,-77);ctx.lineTo(23,-39);ctx.lineTo(-23,-39);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#f6d365";ctx.fillRect(-22,-44,44,6);
+ ctx.lineWidth=12;ctx.strokeStyle=f.skin;
+ ctx.beginPath();ctx.moveTo(-17,-70);ctx.lineTo(-29,-49);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(17,-70);ctx.lineTo(punching?48:28,-66);ctx.stroke();
+ ctx.fillStyle=f.blocking?"#f7d65a":"#202a3e";
+ ctx.beginPath();ctx.arc(punching?48:28,-66,10,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=f.skin;ctx.beginPath();ctx.arc(0,-94,18,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#20202b";ctx.beginPath();ctx.arc(0,-100,18,Math.PI,Math.PI*2);ctx.fill();
+ ctx.fillRect(-17,-101,8,12);
+ ctx.fillStyle="#171923";ctx.fillRect(5,-97,4,4);
+ ctx.fillStyle=f.color;ctx.fillRect(-16,-104,32,5);
+ if(f.blocking){
+  ctx.strokeStyle="#ffe16b";ctx.lineWidth=4;
+  ctx.beginPath();ctx.arc(15,-65,35,-1.2,1.2);ctx.stroke();
+ }
+ if(f.attackTime>0){
+  ctx.strokeStyle=f.attack==="kick"?"#ffbd42":"#65f4ff";ctx.lineWidth=5;
+  ctx.beginPath();ctx.arc(43,-65,24,-.8,.8);ctx.stroke();
+ }
+ if(f.flash>0){ctx.fillStyle="rgba(255,255,255,.5)";ctx.fillRect(-25,-115,50,110);f.flash--}
+ ctx.restore();
+ ctx.fillStyle="white";ctx.font="bold 14px Arial";ctx.textAlign="center";
+ ctx.fillText(f.name,f.x,FLOOR+28);
+}
+function updateFighter(f){
+ if(f.cooldown>0)f.cooldown--;
+ if(f.attackTime>0)f.attackTime--;
+ if(f.blocking&&frame>f.blockUntil)f.blocking=false;
+ if(f.jumping){
+  f.y+=f.vy;f.vy+=.6;
+  if(f.y>=FLOOR){f.y=FLOOR;f.vy=0;f.jumping=false}
+ }
+}
+function aiMove(){
+ if(mode!=="ai"||!running)return;
+ let distance=p1.x-p2.x,d=Math.abs(distance);
+ if(d>105)p2.x+=distance>0?2.1:-2.1;
+ else if(d<65)p2.x+=distance>0?-.7:.7;
+ if(d<135&&frame-lastAI>32){
+  lastAI=frame;
+  if(Math.random()<.23){p2.blocking=true;p2.blockUntil=frame+20}
+  else attack(p2,2,Math.random()<.65?"punch":"kick");
+ }
+ if(d>180&&Math.random()<.025&&!p2.jumping){p2.vy=-12;p2.jumping=true}
+ p2.x=Math.max(40,Math.min(860,p2.x));
+}
+function keydown(e){
+ let k=e.key.toLowerCase();
+ if(["arrowleft","arrowright","arrowup"," "].includes(k))e.preventDefault();
+ if(keys[k])return;keys[k]=true;
+ if(k==="a")act(1,"left");
+ if(k==="d")act(1,"right");
+ if(k==="w")act(1,"jump");
+ if(k==="f")act(1,"punch");
+ if(k==="g")act(1,"kick");
+ if(k==="h")act(1,"block");
+ if(k==="arrowleft")act(2,"left");
+ if(k==="arrowright")act(2,"right");
+ if(k==="arrowup")act(2,"jump");
+ if(k==="1")act(2,"punch");
+ if(k==="2")act(2,"kick");
+ if(k==="3")act(2,"block");
+}
+document.addEventListener("keydown",keydown);
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+function loop(){
+ frame++;
+ if(running){updateFighter(p1);updateFighter(p2);aiMove();faceOpponents()}
+ background();drawFighter(p1);drawFighter(p2);
+ if(running){
+  ctx.fillStyle="#ffe08a";ctx.font="bold 18px Arial";ctx.textAlign="center";
+  ctx.fillText("ROUND 1",450,30);
+ }
+ requestAnimationFrame(loop);
+}
+startGame();loop();
+</script>
+</body>
+</html>
