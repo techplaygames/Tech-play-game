@@ -1,0 +1,23 @@
+
+:root{color-scheme:dark;--bg:#050b20;--panel:#0b1b3b;--cyan:#20dfff;--pink:#ff5cbb;--text:#f4f8ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#14366d,#050b20 65%);color:var(--text);font-family:system-ui,Arial,sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px max(14px,calc((100% - 1050px)/2));border-bottom:1px solid #168bff88;background:#040a1deF}
+header a{color:#8feeff;text-decoration:none;font-weight:800}header strong{font-size:clamp(16px,3vw,22px)}
+main{width:min(100% - 24px,900px);margin:22px auto 40px}
+.panel{background:#091735;border:1px solid #167bce;border-radius:20px;padding:clamp(14px,3vw,24px);box-shadow:0 12px 35px #0007}
+h1{margin:0 0 8px;font-size:clamp(25px,5vw,38px)}p{color:#bdd3f3;line-height:1.5}
+button,.btn{border:1px solid #44dfff;background:linear-gradient(120deg,#0759b8,#087fcb);color:white;border-radius:13px;padding:12px 17px;font-weight:800;font-size:15px;cursor:pointer;touch-action:manipulation}
+button.secondary{background:#14264b;border-color:#496a9d}button:active,.btn:active{transform:scale(.97)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.row.center{justify-content:center}
+#game{display:none;margin-top:18px}canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;background:linear-gradient(#102958,#07132b);border:1px solid #3b9cdb;border-radius:15px;touch-action:none}
+.status{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0;color:#c8e6ff;font-weight:700}
+.controls{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:13px;flex-wrap:wrap}
+.pad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(2,48px);gap:5px}
+.pad button{padding:5px;font-size:19px;user-select:none;-webkit-user-select:none}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.note{font-size:13px;color:#9db9df}.hidden{display:none!important}
+#ticBoard{display:grid;grid-template-columns:repeat(3,minmax(65px,110px));gap:7px;justify-content:center;margin:18px auto}
+.cell{aspect-ratio:1;font-size:clamp(30px,8vw,48px);background:#112c58;border:2px solid #3d9bd8;border-radius:14px}
+select{background:#10264c;color:white;border:1px solid #4ba9dd;padding:11px;border-radius:10px}
+footer{text-align:center;color:#809dc7;padding:20px;font-size:12px}
+@media(max-width:520px){.controls{justify-content:center}.pad{grid-template-columns:repeat(3,58px)}.actions{justify-content:center}}
